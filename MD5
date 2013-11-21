@@ -1,0 +1,11 @@
+6c6ec96c89cdc103ce0f288cf1e52c78 *DESCRIPTION
+5c8da3278d397217f9b648bded42b731 *NAMESPACE
+9287398d0ecfcab4d558cd69b0a1ebee *NEWS
+8dce7250ec17c5c6181f6bae08f3034c *R/data.r
+65ca1986b90c6b12d9689325c029d201 *R/extract_emdat.r
+5a23757d7203c769ef92b3fa30c9ad8e *README.md
+3b973e255bcd6d16676f6392c3bd42f0 *data/emdat_data.rda
+298fd67efe01aa670c7c07e8acba5417 *data/usa_cpi.rda
+7dd6e0c5931dfc70bdc7ae3f54308ea0 *man/emdat_data.Rd
+ca8ccf2449cc64fe1c9b6d1fe9ec6aa9 *man/emdat_extract.Rd
+e30bb5ecd21484493cff2db1975b456a *man/usa_cpi.Rd

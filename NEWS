@@ -1,0 +1,13 @@
+Version 0.1
+-----------
+
+* Data from EM-DAT was downloaded in early Nov 2013 and is not complete
+  for 2013.
+
+* `emdat_extract` can be used to extract data for a desired time period
+  Selection by other criteria may be included in the future.
+  
+* `Location` variable from the EM-DAT database has `...` possibly 
+  when there are too many locations and the web browser cannot display all 
+  the locations. Raw data from EM-DAT has to be obtained to fix this problem.
+  
