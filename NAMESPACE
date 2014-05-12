@@ -1,1 +1,2 @@
-export(emdat_extract)
+export(extract_emdat)
+import(RCurl)

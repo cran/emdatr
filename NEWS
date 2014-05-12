@@ -1,4 +1,27 @@
-Version 0.1
+Version 0.2, May 2014
+-----------
+
+* Data from EMDAT has been updated to include the whole of 2013. GDP and 
+  population data has been updated accordingly.
+
+* The entire cleaned data is now hosted on bitbucket and the package
+  comes only with a sample of the cleaned data. Data from bitbucket
+  can now be obtained using the package via RCurl.
+  
+* Functionality provided by the package has been modified to be consistent
+  with the above mentioned data changes. It is generally advised against the use 
+  of `subset` and `sapply` commands, especially in package development.
+  Hence, the code has been revised accordingly. 
+  
+* `emdat_extract` has been replaced with `extract_emdat`.
+
+* `Year` variable in the cleaned data was found to have missing values due to 
+  a bug in the cleaning process. This bug has been fixed. 
+
+* Vignette has been added to demonstrate not only the use of the package 
+  but also the replication of graphics presented in EMDAT's annual ADSR reports.
+    
+Version 0.1, Nov 2013
 -----------
 
 * Data from EM-DAT was downloaded in early Nov 2013 and is not complete

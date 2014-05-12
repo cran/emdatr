@@ -1,52 +1,80 @@
-#' Extract desired data from pre-processed EM-DAT data
+#' @title Extract desired data from cleaned EMDAT data
 #'
-#' @param years vector of years for which data is desired, permissible range 1900 - 2013
+#' @param sample_only logical flag indicating the desire to get only a sample 
+#' of the EMDAT data (which comes with this package) or the entire dataset 
 #' @param inflation logical indicating whether or not inflation adjustment is desired
-#' @param base_year year on which the inflation adjustment is based on
+#' @param base_year year on which the inflation adjustment is to be based on
+#' @return data frame
+#' @author Gopi Goteti
 #' @export
 #' @examples
-#' # EM-DAT data for all of 2012
-#' losses_2012 <- emdat_extract()
+#' # EMDAT data for all of 2013
+#' losses_2013 <- extract_emdat()
 #' 
-#' # EM-DAT data for all of 2012, inflation-adjusted 
-#' losses_2012_adj <- emdat_extract(inflation = TRUE)
+#' # EMDAT data for all of 2013, inflation-adjusted 
+#' losses_2013_adj <- extract_emdat(inflation = TRUE)
 #' 
-#' # EM-DAT data for 1960-70, inflation-adjusted 
-#' losses_1960s <- emdat_extract(years = c(1960:1970), inflation = TRUE)
+#' # entire EMDAT data, inflation-adjusted 
+#' \dontrun{
+#' losses_all <- extract_emdat(sample_only = FALSE, inflation = TRUE)
+#' }
 
-emdat_extract <- function(years = c(2012, 2012), inflation = FALSE, base_year = 2012) {
-                            
-  # invoke data
-  emdat_data <- NULL
-  usa_cpi <- NULL
-  data(emdat_data, envir = environment())
-  data(usa_cpi, envir = environment())
+extract_emdat <- function(sample_only = TRUE, inflation = FALSE, base_year = 2013) {
   
-  # sanity checks
-  year_vec <- c(1900:2013)
-  if(!(all(years %in% year_vec))) {
-    stop("year has to be within the range ", year_vec[1], " - ", 
-         year_vec[length(year_vec)], "\n")
+  #check inputs
+  if (!is.logical(sample_only)) {
+    stop("sample_only has to be either TRUE or FALSE!")
+  }
+  if (!is.logical(inflation)) {
+    stop("inflation has to be either TRUE or FALSE!")
   }
   if (inflation) {
+    
+    usa_cpi <- NULL
+    data(usa_cpi, envir = environment())
+    
     if(!(base_year %in% usa_cpi$Year)) {
       stop("year for inflation adjustment should be within the range ", 
            usa_cpi$Year[1], " - ", usa_cpi$Year[nrow(usa_cpi)], "\n")  
     } 
   }
   
-  # extract subset of emdat for the years of interest
-  out_df <- subset(emdat_data, emdat_data$Year %in% years)
-  out_df <- droplevels(out_df)
-  
+  if (sample_only) {
+    # get sample data
+    emdat_sample <- NULL
+    data(emdat_sample, envir = environment())
+    
+    out_df <- emdat_sample
+    
+  } else {    
+    # get complete data from bitbucket    
+    emdat_cleaned <- NULL
+    
+    emdat_url <- "https://bitbucket.org/rationshop/packages/raw/master/emdat_cleaned.txt"
+    if(url.exists(emdat_url, ssl.verifypeer = FALSE)) {
+      message("downloading data from bitbucket. might take a few moments...")
+      emdat_data <- getURL(emdat_url, ssl.verifypeer = FALSE)    
+      emdat_cleaned <- read.csv(text = emdat_data, header = TRUE, quote = "", as.is = TRUE, sep = "\t")
+    } else {
+      stop("URL for the complete EMDAT data does not exist!")
+    }
+    
+    out_df <- emdat_cleaned
+  }
+                            
+    
   # adjustment for inflation
   if (inflation) {
-    
     # cpi for the base year
     base_cpi <- usa_cpi$CPI[which(usa_cpi$Year == base_year)]
     # cpi for all the records based on begin year
-    curr_cpi <- sapply(out_df$Year, FUN = function(x) usa_cpi$CPI[which(usa_cpi$Year == x)])
-                       
+    Fn_Get_CPI <- function(yr) {
+      ifelse(yr %in% seq(usa_cpi$Year[1], usa_cpi$Year[nrow(usa_cpi)]), 
+             usa_cpi$CPI[which(usa_cpi$Year == yr)],
+             NA)      
+    }
+    curr_cpi <- vapply(out_df$Year, FUN = Fn_Get_CPI, FUN.VALUE = c(1))
+    
     # adjustment factor
     adj_factor <- base_cpi / curr_cpi
     
