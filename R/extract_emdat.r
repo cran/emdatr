@@ -8,18 +8,18 @@
 #' @author Gopi Goteti
 #' @export
 #' @examples
-#' # EMDAT data for all of 2013
-#' losses_2013 <- extract_emdat()
+#' # EMDAT data for all of 2014
+#' losses_2014 <- extract_emdat()
 #' 
-#' # EMDAT data for all of 2013, inflation-adjusted 
-#' losses_2013_adj <- extract_emdat(inflation = TRUE)
+#' # EMDAT data for all of 2014, inflation-adjusted 
+#' losses_2014_adj <- extract_emdat(inflation = TRUE)
 #' 
 #' # entire EMDAT data, inflation-adjusted 
 #' \dontrun{
 #' losses_all <- extract_emdat(sample_only = FALSE, inflation = TRUE)
 #' }
 
-extract_emdat <- function(sample_only = TRUE, inflation = FALSE, base_year = 2013) {
+extract_emdat <- function(sample_only = TRUE, inflation = FALSE, base_year = 2014) {
   
   #check inputs
   if (!is.logical(sample_only)) {
@@ -50,7 +50,7 @@ extract_emdat <- function(sample_only = TRUE, inflation = FALSE, base_year = 201
     # get complete data from bitbucket    
     emdat_cleaned <- NULL
     
-    emdat_url <- "https://bitbucket.org/rationshop/packages/raw/master/emdat_cleaned.txt"
+    emdat_url <- "https://bitbucket.org/rationshop/packages/raw/master/emdat_cleaned_v03.txt"
     if(url.exists(emdat_url, ssl.verifypeer = FALSE)) {
       message("downloading data from bitbucket. might take a few moments...")
       emdat_data <- getURL(emdat_url, ssl.verifypeer = FALSE)    
@@ -84,3 +84,4 @@ extract_emdat <- function(sample_only = TRUE, inflation = FALSE, base_year = 201
   
   return (out_df)
 }
+ 

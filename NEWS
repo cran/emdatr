@@ -1,3 +1,19 @@
+Version 0.3, May 2015
+-----------
+
+* Data from EMDAT has been updated to include the whole of 2014 (latest 
+  as of May 2015). GDP and population data has been updated, but 2014 data 
+  is still not available from the World Bank. USA Consumer Price Index data 
+  has been revised to include 2014 data.
+
+* Previous versions of EMDAT involved significant cleanup of raw data from EMDAT 
+  (such as country names and typos in Type/SubType of disasters). The latest 
+  data from EMDAT does not have many of these issues.
+
+* Vignette has been changed from a PDF to a markdown document.
+
+* Changed License from GPL to MIT.
+  
 Version 0.2, May 2014
 -----------
 

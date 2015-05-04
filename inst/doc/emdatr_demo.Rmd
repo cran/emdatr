@@ -1,0 +1,251 @@
+<!--
+%\VignetteEngine{knitr}
+%\VignetteIndexEntry{Package Demo: emdatr}
+-->
+
+```{r, echo = FALSE, message = FALSE}
+knitr::opts_chunk$set(
+  comment = "#>",
+  error = FALSE,
+  tidy = FALSE)
+```
+
+# Overview of EMDAT Database
+
+The International Disaster Database, [EMDAT](http://www.emdat.be/database/) from the Center for Research on the Epidemiology of Disasters (CRED, Belgium) is often used as a reference for losses on human life and property resulting from select natural and man-made disasters. This database has over 21,000 country-level records from 1900 to present. Data is available for free from EMDAT.
+
+Major issues with EMDAT data are as follows.
+
+* __Accessibility__ - There is no option to obtain the entire database; only subsets of the data can be obtained by clicking through the GUI.
+* __Reporting__ - [Annual reports published by EMDAT][adsr_ref] are inconsistent with one another. For instance, number of disasters in 2002 were reported to be 428 in the Annual Disaster Statistical Review (ADSR) report for 2013. But the same number in the 2012, 2011, 2010, 2009 and 2008 reports is 428, 421, 421, 422 and 421, respectively! This could partly be due to the static nature of these reports. Whereas data gets updated in the database, the reports generated in the past are not.
+* __Auxiliary Information__
+    + Economic Indicators - Reported financial losses are from the year of occurrence of the disaster. EMDAT does not provide information needed to "normalize" historical losses to the present time. Typically socio-economic indicators, such as population and GDP, are used for such a "normalization".
+    + GIS Attributes - The `Location` associated with a disaster is often a province/state within a country. It would be immensely valuable to have the approximate geographical boundaries or coordinates of the disaster locations and affected spatial domain. EMDAT does not provide such information. A shapefile associated with each file would be a great place to start. 
+    + Skipped Events - For an event to be included in the EMDAT database it has to pass one of several criteria, such as, at least 10 people being killed. Although these criteria seem reasonable, they are still arbitrary. Appropriate catastrophic risk management analysis requires frequency and severity of all events, both big and small. 
+
+The package *emdatr* addresses some the above issues. The goal of the package is to improve the EMDAT database by promoting its use, shedding light on its limitations, and making analysis of the data easier using R.
+
+# Using *emdatr*
+
+After installing the package, load the package along with **RCurl** (for data extraction from bitbucket.org), **ggplot** (for graphics) and **plyr** (for data manipulation).
+
+```{r, message = FALSE}
+library(emdatr)
+library(RCurl)
+library(ggplot2)
+library(plyr)
+```
+
+The single main function provided by **emdatr** is `extract_emdat`. This could be used to extract a sample of the EMDAT data (which comes with this package) or the entire data. First, load the sample data that comes with the package.
+
+```{r}
+losses_2014 <- extract_emdat()
+
+dim(losses_2014)
+head(losses_2014)
+```
+
+The default options of `extract_emdat` do not make any adjustments for inflation. Next, obtain the entire dataset with the `inflation` option enabled. This might take a few moments. The resulting dataset has all historical financial losses adjusted for inflation. If a different year of adjustment is desired, change the `base_year` accordingly.
+
+```{r}
+losses_all <- extract_emdat(sample_only = FALSE, inflation = TRUE)
+```
+
+Adjustment for inflation is currently based on the Consumer Price Index (CPI) of the United States - i.e., the adjustment factor is the ratio of CPI in the `base_year` and the CPI in the year of the disaster. Such an adjustment may be inappropriate since it does not directly account for economic changes in the country of occurrence. Future updates to the package could incorporate inflation adjustment using GDP, population and other socio-economic indicators.
+
+# Duplicating Select Graphics from ADSR 2013 Report
+
+Example graphics shown in this section are intended to duplicate some of those shown in EMDAT's [ADSR report from 2013][adsr_ref]. 
+
+From the entire dataset, identify natural disasters only.
+
+```{r}
+nat_data <- losses_all[losses_all$Group %in% c("Climatological", "Geophysical", 
+                                               "Hydrological", "Meteorological"), ]
+nat_data <- droplevels(nat_data)
+
+# assign missing value to 0s before using cbind in aggregate
+nat_data$Killed[is.na(nat_data$Killed)] <- 0
+nat_data$TotAffected[is.na(nat_data$TotAffected)] <- 0
+
+nat_data$Year <- as.factor(nat_data$Year)
+```
+
+## Figure 1, ADSR Report 2013
+
+Identify number killed and affected per year from 1990 through 2013. 
+
+```{r}
+gfx_deaths <- aggregate(cbind(Killed, TotAffected) ~ Year, data = nat_data, FUN = sum)
+# total in millions
+gfx_deaths$Total <- (gfx_deaths$Killed + gfx_deaths$TotAffected)/10^6
+gfx_deaths <- gfx_deaths[, c("Year", "Total")]
+gfx_deaths <- gfx_deaths[gfx_deaths$Year %in% seq(1990, 2013), ]
+gfx_deaths <- droplevels(gfx_deaths)
+```
+
+Plot number killed or affected by year, similar to the barplot in EMDAT's ADSR report from 2013 (Figure 1, pg. 4 of the ADSR report).
+
+```{r}
+gfx_bar <- ggplot(gfx_deaths, aes(x = Year, y = Total))
+gfx_bar <- gfx_bar + geom_bar(position = "dodge", stat = "identity", fill = "blue")
+gfx_bar <- gfx_bar + ylab("Reported Victims (in Millions)")
+gfx_bar <- gfx_bar + ylim(0, 800)
+gfx_bar <- gfx_bar + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+gfx_bar <- gfx_bar + geom_text(aes(label = round(Total), hjust = 0.5, vjust = 0), size = 4)
+
+plot(gfx_bar)
+```
+
+Number of events per year from 1990 through 2013.
+
+```{r}
+gfx_events <- as.data.frame(table(nat_data$Year), stringsAsFactors = FALSE)
+colnames(gfx_events) <- c("Year", "Total_Events")
+
+gfx_events <- gfx_events[gfx_events$Year >= 1990 & gfx_events$Year <= 2013, ]
+
+gfx_events[gfx_events$Year == 2002, ]
+```
+
+Plot number of events by year, similar to the lineplot in EMDAT's ADSR report 2013 (Figure 1, pg. 4 of the ADSR report). Note that the number of events in 2002 were reported to be 428 in the ADSR 2013 report. But the same number in the 2012, 2011, 2010, 2009 and 2008 reports is 428, 421, 421, 422 and 421, respectively!
+
+
+```{r}
+gfx_line <- ggplot(gfx_events, aes(x = Year, y = Total_Events, group = 1))
+gfx_line <- gfx_line + geom_line()
+gfx_line <- gfx_line + ylab("Disasters Per Year")
+gfx_line <- gfx_line + ylim(0, 500)
+gfx_line <- gfx_line + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot(gfx_line)
+```
+
+
+## Figure 3 and 6, ADSR Report 2013
+
+In order to replicate the graphic on top 10 countries by loss (Figure 3 and 6, pg. 15-17 of the ADSR report), a generic function is developed below which could not only be used with loss but also other variables.
+
+```{r}
+Fn_Get_Top_Countries <- function(input_df, var_name, plot_title) {
+    var_vec <- c("Events", "EstDamage", "TotAffected", "Killed")
+    stopifnot(identical(colnames(input_df), colnames(nat_data)))
+    stopifnot(var_name %in% var_vec)
+
+    fun_name <- "sum"
+    if (var_name == "Events") {
+        fun_name <- "length"
+        var_name <- "Year"
+    }
+
+    # summary by country per natural disaster group
+    data_by_group <- aggregate(as.formula(paste(var_name, " ~ ISO_cntry + Group")), 
+        data = input_df, FUN = fun_name)
+    colnames(data_by_group) <- c("Country", "Group", var_name)
+
+    # totals by country
+    data_agg <- aggregate(as.formula(paste(var_name, " ~ ISO_cntry")), data = input_df, 
+        FUN = fun_name)
+    colnames(data_agg) <- c("Country", "Totals")
+    data_agg <- data_agg[order(data_agg$Totals, decreasing = TRUE), ]
+    cntrys_10 <- data_agg$Country[1:10]
+
+    # merge above two data frames
+    out_df <- merge(data_by_group, data_agg, by = "Country")
+    out_df <- out_df[order(out_df$Totals, decreasing = TRUE), ]
+
+    out_df <- out_df[out_df$Country %in% cntrys_10, ]
+    out_df <- droplevels(out_df)
+
+    out_df$Country <- factor(out_df$Country, levels = rev(cntrys_10))
+    # percentage share
+    out_df$Pers <- out_df[, var_name] * 100/out_df$Totals
+
+    return(out_df)
+}
+```
+
+Use the above function to get natural disaster counts by disaster Group for 2013 for the top 10 countries.
+
+```{r}
+nat_2013 <- nat_data[nat_data$Year == 2013, ]
+nat_2013 <- droplevels(nat_2013)
+
+gfx_2013_counts <- Fn_Get_Top_Countries(nat_2013, "Events")
+
+head(gfx_2013_counts, 10)
+```
+
+Barplot of top 10 countries by number of natural disasters in 2013. Compare with Figure 3, pg. 15 of the ADSR report from 2013.
+
+
+```{r}
+gfx_bar <- ggplot(gfx_2013_counts, aes(x = Country, y = Year, group = Group))
+gfx_bar <- gfx_bar + geom_bar(aes(fill = Group), position = "stack", stat = "identity")
+gfx_bar <- gfx_bar + ylab("Number of Events") + xlab(NULL)
+gfx_bar <- gfx_bar + coord_flip()
+
+plot(gfx_bar)
+```
+
+Use the above function to get natural disaster losses by disaster Group for 2013 for the top 10 countries. 
+
+```{r}
+gfx_2013_losses <- Fn_Get_Top_Countries(nat_2013, "EstDamage")
+head(gfx_2013_losses, 10)
+```
+
+Pieplot of these top 10 countries. Compare this with Figure 6, pg. 17 of the ADSR report from 2013. Note that the percentage share of the Group is not always the same between these two graphics.
+
+```{r}
+gfx_pie <- ggplot(gfx_2013_losses, aes(x = "", y = Pers, fill = Group))
+gfx_pie <- gfx_pie + facet_wrap(~Country)
+gfx_pie <- gfx_pie + geom_bar(width = 1, stat = "identity")
+gfx_pie <- gfx_pie + coord_polar(theta = "y")
+gfx_pie <- gfx_pie + theme(axis.ticks = element_blank(), axis.text.y = element_blank(), 
+    axis.text.x = element_blank())
+gfx_pie <- gfx_pie + xlab("") + ylab("")
+
+plot(gfx_pie)
+```
+
+## Map 3, ADSR Report 2013
+
+Map 3 of the ADSR Report (see pg. 34) is confusing because the color scheme of the barplots and the color scheme of the continental regions in the map overlap. Below code reproduces the statistics presented in Map 3. 
+
+First, compute the regional disaster losses and the percent share of each region within each Group.
+
+```{r}
+gfx_reg1 <- ddply(nat_2013[, c("EstDamage", "Group", "region")], 
+                  .(region, Group), 
+                  summarize, 
+                  tot_by_group = sum(EstDamage, na.rm = TRUE))
+gfx_reg2 <- ddply(nat_2013[, c("EstDamage", "Group", "region")], 
+                  .(Group), 
+                  summarize,                 
+                  tot_by_reg = sum(EstDamage, na.rm = TRUE))
+gfx_reg <- merge(gfx_reg1, gfx_reg2, by = "Group", all.x = TRUE)
+gfx_reg$share <- gfx_reg$tot_by_group * 100 / gfx_reg$tot_by_reg
+
+head(gfx_reg)
+```
+
+Plot percent share of each region within each Group.
+
+```{r}
+gfx_bar <- ggplot(gfx_reg, aes(x = Group, y = share, group = region))
+gfx_bar <- gfx_bar + geom_bar(aes(fill = Group), position = "dodge", stat = "identity")
+gfx_bar <- gfx_bar + facet_wrap(~region, scales = "free_y")
+gfx_bar <- gfx_bar + ylab("Percent Share") + xlab(NULL)
+gfx_bar <- gfx_bar + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+plot(gfx_bar)
+```
+
+# Future Work
+
+* Identify latitude and longitude of each location affected by the event. 
+* Add functionality on "normalization" of historical losses using socio-economic indicators such as population and GDP.
+
+[adsr_ref]: http://www.emdat.be/publications "Annual Disaster Statistical Review (ADSR) Reports"
+
